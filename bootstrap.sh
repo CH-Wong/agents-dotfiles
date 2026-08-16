@@ -16,6 +16,19 @@ link_dir() {
   ln -s "$target" "$dest"
 }
 
+# Same idea as link_dir but for a single file, refusing to clobber a real
+# (non-symlink) file that might contain unrelated local content.
+link_file() {
+  local target="$1" dest="$2"
+  if [[ -L "$dest" ]]; then
+    rm "$dest"
+  elif [[ -e "$dest" ]]; then
+    echo "Warning: $dest already exists and is not a symlink - leaving it alone." >&2
+    return
+  fi
+  ln -s "$target" "$dest"
+}
+
 mkdir -p ~/.claude
 
 if [[ "$REPO_DIR" == /mnt/c/* ]]; then
@@ -33,5 +46,18 @@ fi
 ln -sf AGENTS.md ~/.claude/CLAUDE.md
 link_dir "$REPO_DIR/skills" ~/.claude/skills
 
+mkdir -p ~/bin
+for f in "$REPO_DIR"/bin/*.sh; do
+  link_file "$f" ~/bin/"$(basename "$f")"
+done
+
+# Source the voice tmux config idempotently, without clobbering any other
+# machine-specific ~/.tmux.conf content the user may have added locally.
+VOICE_CONF_LINE="source-file $REPO_DIR/tmux/voice.conf"
+touch ~/.tmux.conf
+if ! grep -qF "$VOICE_CONF_LINE" ~/.tmux.conf; then
+  echo "$VOICE_CONF_LINE" >> ~/.tmux.conf
+fi
+
 echo "Symlinks wired up:"
-ls -la ~/.claude/AGENTS.md ~/.claude/CLAUDE.md ~/.claude/skills
+ls -la ~/.claude/AGENTS.md ~/.claude/CLAUDE.md ~/.claude/skills ~/bin
