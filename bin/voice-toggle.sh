@@ -25,12 +25,13 @@ log() { printf '[%s] :: %s\n' "$(date +%T.%3N)" "$1" >> "$DEBUG_LOG"; }
 tmux_refresh() { tmux refresh-client -S 2>/dev/null; }
 
 if [[ -f "$STATE_FILE" ]]; then
-    # --- stop & transcribe ---
+    # --- stop recording, then transcribe ---
     log "stop requested"
     PARECORD_PID="$(cat "$PID_FILE" 2>/dev/null || true)"
     [[ -n "$PARECORD_PID" ]] && kill "$PARECORD_PID" 2>/dev/null
     sleep 0.3   # let parecord flush the wav header/data before we read it
-    rm -f "$STATE_FILE" "$PID_FILE"
+    rm -f "$PID_FILE"
+    printf 'transcribing' > "$STATE_FILE"
     tmux_refresh
 
     TARGET_PANE="$(cat "$PANE_FILE" 2>/dev/null || true)"
@@ -38,13 +39,16 @@ if [[ -f "$STATE_FILE" ]]; then
 
     if [[ ! -x "$WHISPER_BIN" ]]; then
         log "ERROR whisper-cli missing at $WHISPER_BIN"
+        rm -f "$STATE_FILE"
+        tmux_refresh
         tmux display-message "voice: whisper-cli not found"
         exit 1
     fi
 
     TRANSCRIPT="$("$WHISPER_BIN" -m "$WHISPER_MODEL" -f "$WAV_FILE" -nt -np 2>/dev/null | tr '\n' ' ' | sed 's/  */ /g; s/^ *//; s/ *$//')"
     log "transcript='$TRANSCRIPT'"
-    rm -f "$WAV_FILE"
+    rm -f "$WAV_FILE" "$STATE_FILE"
+    tmux_refresh
 
     if [[ -z "$TRANSCRIPT" ]]; then
         tmux display-message "voice: no speech detected"
@@ -69,7 +73,7 @@ else
     setsid parecord "${DEVICE_ARGS[@]}" --channels=1 --rate=16000 --format=s16le "$WAV_FILE" < /dev/null > /dev/null 2>&1 &
     disown
     echo $! > "$PID_FILE"
-    printf '1' > "$STATE_FILE"
+    printf 'recording' > "$STATE_FILE"
     tmux_refresh
     log "recording started, pane=$PANE_ID pid=$(cat "$PID_FILE")"
 fi

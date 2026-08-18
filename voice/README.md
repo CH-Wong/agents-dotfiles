@@ -11,8 +11,8 @@ Works entirely inside WSL2/Linux via the tmux status bar and keybindings; no Win
 
 ## Usage
 
-- `prefix + v` in tmux starts recording. The status bar shows a pulsing "REC" indicator.
-- `prefix + v` again stops recording, transcribes locally, and types the result into whatever pane was active when you started -- exactly as if you'd typed it.
+- `prefix + v` in tmux starts recording. A "REC" indicator appears centered in the status bar.
+- `prefix + v` again stops recording. The indicator switches to "TRANSCRIBING..." while whisper.cpp runs locally, then the result is typed into whatever pane was active when you started -- exactly as if you'd typed it.
 - `voice-level.sh` shows a live mic input level meter, useful for checking the mic is actually being picked up.
 - `VOICE_INPUT_DEVICE` env var selects a specific PulseAudio source (see `pactl list short sources`); empty uses the default.
 
