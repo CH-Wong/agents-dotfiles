@@ -15,3 +15,5 @@ These get their own opt-in install script here, same convention as `voice/setup-
   Still requires an interactive `gh auth login` afterward.
 - `install-chrome-devtools-axi.sh` installs the `chrome-devtools-axi` skill (upstream `kunchenguid/chrome-devtools-axi`) and Google Chrome, which it needs to actually launch a browser.
   On WSL, a Windows-side Chrome under `/mnt/c` is not enough -- Puppeteer needs a Linux-side binary.
+- `install-gnhf.sh` installs the `gnhf` skill from a hardened fork, `CH-Wong/gnhf`, and the pinned `gnhf` CLI it wraps.
+  GNHF runs a coding agent unattended with permission checks disabled -- the fork's only change is requiring the skill to disclose that and get sign-off before the first launch each conversation.
