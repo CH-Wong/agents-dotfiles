@@ -1,7 +1,7 @@
 # Voice dictation
 
 Fully local, offline push-to-talk voice dictation for Claude Code prompts, using whisper.cpp.
-Works entirely inside WSL2/Linux via the tmux status bar and keybindings; no Windows-side component needed.
+Works entirely inside WSL2/Linux via a tmux keybinding and popup; no Windows-side component needed.
 
 ## Setup on a new machine
 
@@ -11,8 +11,8 @@ Works entirely inside WSL2/Linux via the tmux status bar and keybindings; no Win
 
 ## Usage
 
-- `prefix + v` in tmux starts recording. A "REC" indicator appears centered in the status bar.
-- `prefix + v` again stops recording. The indicator switches to "TRANSCRIBING..." while whisper.cpp runs locally, then the result is typed into whatever pane was active when you started -- exactly as if you'd typed it.
+- `prefix + v` in tmux starts recording. A floating "REC" popup appears at the bottom middle of the active pane (or the bottom middle of the whole terminal if the pane is too small to fit it).
+- `prefix + v` again stops recording. The popup switches to "TRANSCRIBING..." while whisper.cpp runs locally, then closes itself once the result is typed into whatever pane was active when you started -- exactly as if you'd typed it.
 - `voice-level.sh` shows a live mic input level meter, useful for checking the mic is actually being picked up.
 - `VOICE_INPUT_DEVICE` env var selects a specific PulseAudio source (see `pactl list short sources`); empty uses the default.
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # tmux prefix+v: toggle background voice dictation for whichever pane was
 # active when recording started. Runs fully detached from any pane -- the
-# pane's own screen (Claude Code's TUI) is never touched. Only the tmux
-# status bar (tmux-voice-status.sh) shows recording state. On stop, the
-# transcript is injected into the target pane via `tmux send-keys`, exactly
-# as if typed there.
+# pane's own screen (Claude Code's TUI) is never touched. A floating popup
+# (voice-popup.sh) shows recording/transcribing state and closes itself
+# once state goes back to idle. On stop, the transcript is injected into
+# the target pane via `tmux send-keys`, exactly as if typed there.
 
 set -uo pipefail
 
@@ -75,5 +75,15 @@ else
     echo $! > "$PID_FILE"
     printf 'recording' > "$STATE_FILE"
     tmux_refresh
+
+    # Bottom-middle of the active pane. tmux clamps popups to stay fully
+    # on-screen, so if the pane is too small this naturally falls back to
+    # bottom-middle of the whole terminal instead.
+    tmux display-popup -E -T ' Voice ' -w 40 -h 8 \
+        -x '#{e|/:#{e|-:#{e|+:#{popup_pane_left},#{popup_pane_right}},#{popup_width}},2}' \
+        -y '#{e|-:#{popup_pane_bottom},#{popup_height}}' \
+        "~/bin/voice-popup.sh" &
+    disown
+
     log "recording started, pane=$PANE_ID pid=$(cat "$PID_FILE")"
 fi
