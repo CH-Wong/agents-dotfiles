@@ -12,7 +12,8 @@ Works entirely inside WSL2/Linux via a tmux keybinding and popup; no Windows-sid
 ## Usage
 
 - `prefix + v` in tmux starts recording. A floating "REC" popup appears at the bottom middle of the active pane (or the bottom middle of the whole terminal if the pane is too small to fit it).
-- `prefix + v` again stops recording. The popup switches to "TRANSCRIBING..." while whisper.cpp runs locally, then closes itself once the result is typed into whatever pane was active when you started -- exactly as if you'd typed it.
+- Press any key while the popup is showing to stop recording (not `prefix + v` again -- tmux popups take over all keyboard input while displayed, so the normal keybinding can't reach it; see Design notes).
+  The popup switches to "TRANSCRIBING..." while whisper.cpp runs locally, then closes itself once the result is typed into whatever pane was active when you started -- exactly as if you'd typed it.
 - `voice-level.sh` shows a live mic input level meter, useful for checking the mic is actually being picked up.
 - `VOICE_INPUT_DEVICE` env var selects a specific PulseAudio source (see `pactl list short sources`); empty uses the default.
 
@@ -21,3 +22,7 @@ Works entirely inside WSL2/Linux via a tmux keybinding and popup; no Windows-sid
 Recording is triggered by a tmux keybinding, not a Claude Code keybinding or `$EDITOR`/Ctrl+G.
 Claude Code tears down its own screen before handing off to `$EDITOR` (like `git commit` opening vim), so anything routed through that path causes a visible blank flash with no way around it.
 Triggering from tmux directly and injecting the transcript with `tmux send-keys` avoids that entirely -- Claude Code's screen is never suspended or touched.
+
+tmux popups own all keyboard input while displayed -- there is no click-through/non-focus-stealing popup mode, so `prefix + v` cannot reach tmux's normal keybinding table once the popup is up.
+`voice-popup.sh` therefore turns off local echo (`stty -echo`) and reads its own keypress to trigger the stop, rather than waiting on the tmux binding.
+It also drains any input left buffered right after that keypress, so a habit-press of the full `prefix + v` sequence does not leak the trailing `v` into whatever pane regains focus once the popup closes.
