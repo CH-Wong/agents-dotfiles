@@ -10,6 +10,10 @@ set -uo pipefail
 
 WHISPER_BIN="$HOME/tools/whisper.cpp/build/bin/whisper-cli"
 WHISPER_MODEL="$HOME/tools/whisper.cpp/models/ggml-base.en.bin"
+# VAD trims trailing/leading silence before decoding -- without it,
+# base.en can hallucinate repeated tokens (e.g. "[pause] [pause] ...")
+# into the gap between finishing a sentence and pressing stop.
+VAD_MODEL="$HOME/tools/whisper.cpp/models/ggml-silero-v6.2.0.bin"
 # PulseAudio source name to record from, e.g. "RDPSource"; empty = default.
 # List available sources with: pactl list short sources
 INPUT_DEVICE="${VOICE_INPUT_DEVICE:-}"
@@ -19,6 +23,7 @@ PANE_FILE="$STATE_DIR/target_pane"
 WAV_FILE="$STATE_DIR/rec.wav"
 PID_FILE="$STATE_DIR/parecord.pid"
 DEBUG_LOG="$STATE_DIR/debug.log"
+MIC_NAME_FILE="$STATE_DIR/mic_name"
 
 mkdir -p "$STATE_DIR"
 log() { printf '[%s] :: %s\n' "$(date +%T.%3N)" "$1" >> "$DEBUG_LOG"; }
@@ -35,7 +40,7 @@ if [[ -f "$STATE_FILE" ]]; then
     tmux_refresh
 
     TARGET_PANE="$(cat "$PANE_FILE" 2>/dev/null || true)"
-    rm -f "$PANE_FILE"
+    rm -f "$PANE_FILE" "$MIC_NAME_FILE"
 
     if [[ ! -x "$WHISPER_BIN" ]]; then
         log "ERROR whisper-cli missing at $WHISPER_BIN"
@@ -45,7 +50,9 @@ if [[ -f "$STATE_FILE" ]]; then
         exit 1
     fi
 
-    TRANSCRIPT="$("$WHISPER_BIN" -m "$WHISPER_MODEL" -f "$WAV_FILE" -nt -np 2>/dev/null | tr '\n' ' ' | sed 's/  */ /g; s/^ *//; s/ *$//')"
+    VAD_ARGS=()
+    [[ -f "$VAD_MODEL" ]] && VAD_ARGS=(--vad -vm "$VAD_MODEL")
+    TRANSCRIPT="$("$WHISPER_BIN" -m "$WHISPER_MODEL" -f "$WAV_FILE" -nt -np "${VAD_ARGS[@]}" 2>/dev/null | tr '\n' ' ' | sed 's/  */ /g; s/^ *//; s/ *$//')"
     log "transcript='$TRANSCRIPT'"
     rm -f "$WAV_FILE" "$STATE_FILE"
     tmux_refresh
@@ -67,7 +74,7 @@ else
     PANE_ID="$(tmux display-message -p '#{pane_id}')"
     printf '%s' "$PANE_ID" > "$PANE_FILE"
 
-    rm -f "$WAV_FILE"
+    rm -f "$WAV_FILE" "$MIC_NAME_FILE"
     DEVICE_ARGS=()
     [[ -n "$INPUT_DEVICE" ]] && DEVICE_ARGS=(--device="$INPUT_DEVICE")
     setsid parecord "${DEVICE_ARGS[@]}" --channels=1 --rate=16000 --format=s16le "$WAV_FILE" < /dev/null > /dev/null 2>&1 &
@@ -76,10 +83,24 @@ else
     printf 'recording' > "$STATE_FILE"
     tmux_refresh
 
+    # Query Windows' actual default recording device name in the
+    # background (powershell.exe startup is slow, ~0.5-1s) so the popup
+    # can show it once ready -- catches "wrong mic selected" mistakes
+    # (e.g. a mic in a different room) that a bare level meter alone
+    # can't name. Best-effort: if AudioDeviceCmdlets isn't installed or
+    # the query fails/hangs, mic_name just never appears and the popup
+    # falls back to the level meter alone.
+    (
+        timeout 5 powershell.exe -NoProfile -Command \
+            "Import-Module AudioDeviceCmdlets -ErrorAction Stop; (Get-AudioDevice -Recording).Name" \
+            2>/dev/null | tr -d '\r' | head -1 > "$MIC_NAME_FILE"
+    ) &
+    disown
+
     # Bottom-middle of the active pane. tmux clamps popups to stay fully
     # on-screen, so if the pane is too small this naturally falls back to
     # bottom-middle of the whole terminal instead.
-    tmux display-popup -E -T ' Voice ' -w 40 -h 8 \
+    tmux display-popup -E -T ' Voice ' -w 46 -h 10 \
         -x '#{e|/:#{e|-:#{e|+:#{popup_pane_left},#{popup_pane_right}},#{popup_width}},2}' \
         -y '#{e|-:#{popup_pane_bottom},#{popup_height}}' \
         "~/bin/voice-popup.sh" &

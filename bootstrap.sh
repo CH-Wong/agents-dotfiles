@@ -51,13 +51,17 @@ for f in "$REPO_DIR"/bin/*.sh; do
   link_file "$f" ~/bin/"$(basename "$f")"
 done
 
-# Source the voice tmux config idempotently, without clobbering any other
-# machine-specific ~/.tmux.conf content the user may have added locally.
-VOICE_CONF_LINE="source-file $REPO_DIR/tmux/voice.conf"
+# Source every tmux/*.conf module idempotently, without clobbering any
+# other machine-specific ~/.tmux.conf content the user may have added
+# locally. New modules just need to be dropped in tmux/ - no bootstrap
+# changes required.
 touch ~/.tmux.conf
-if ! grep -qF "$VOICE_CONF_LINE" ~/.tmux.conf; then
-  echo "$VOICE_CONF_LINE" >> ~/.tmux.conf
-fi
+for f in "$REPO_DIR"/tmux/*.conf; do
+  CONF_LINE="source-file $f"
+  if ! grep -qF "$CONF_LINE" ~/.tmux.conf; then
+    echo "$CONF_LINE" >> ~/.tmux.conf
+  fi
+done
 
 echo "Symlinks wired up:"
 ls -la ~/.claude/AGENTS.md ~/.claude/CLAUDE.md ~/.claude/skills ~/bin

@@ -11,6 +11,7 @@ set -euo pipefail
 
 WHISPER_DIR="$HOME/tools/whisper.cpp"
 MODEL="base.en"
+VAD_MODEL="silero-v6.2.0"
 
 if ! command -v cmake >/dev/null || ! command -v pacat >/dev/null || ! command -v ffmpeg >/dev/null; then
   echo "Installing system dependencies (requires sudo)..."
@@ -34,6 +35,24 @@ if [[ ! -f "$WHISPER_DIR/models/ggml-$MODEL.bin" ]]; then
   bash "$WHISPER_DIR/models/download-ggml-model.sh" "$MODEL"
 fi
 
+if [[ ! -f "$WHISPER_DIR/models/ggml-$VAD_MODEL.bin" ]]; then
+  echo "Downloading $VAD_MODEL VAD model..."
+  bash "$WHISPER_DIR/models/download-vad-model.sh" "$VAD_MODEL"
+fi
+
+# Best-effort, WSL-only: lets the recording popup show the actual
+# Windows default-mic name (voice-toggle.sh queries it via
+# Get-AudioDevice). Falls back to "(detecting...)" forever if this
+# isn't installed or powershell.exe isn't reachable -- harmless on a
+# plain Linux/macOS machine, so this step just no-ops there.
+if command -v powershell.exe >/dev/null 2>&1; then
+  echo "Installing AudioDeviceCmdlets PowerShell module (for mic-name display)..."
+  powershell.exe -NoProfile -Command \
+    "Install-Module -Name AudioDeviceCmdlets -Scope CurrentUser -Force -AllowClobber" \
+    || echo "  Warning: AudioDeviceCmdlets install failed -- popup will still work, just without the mic name."
+fi
+
 echo "Done. whisper-cli: $WHISPER_DIR/build/bin/whisper-cli"
 echo "Model: $WHISPER_DIR/models/ggml-$MODEL.bin"
+echo "VAD model: $WHISPER_DIR/models/ggml-$VAD_MODEL.bin"
 echo "Make sure bootstrap.sh has been run so ~/bin and ~/.tmux.conf are wired up, then use prefix+v in tmux."
