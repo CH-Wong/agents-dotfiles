@@ -22,6 +22,7 @@ Two optional conveniences do reach across into Windows (both WSL-only, both best
 - `voice-level.sh` shows a live mic input level meter standalone (outside a recording), useful for a quick mic check.
 - `voice-diagnose.sh [seconds]` records a one-off sample, reports capture stats (peak/clipping), and transcribes it with a few model/VAD combinations side by side -- the tool to reach for when dictation quality seems off, to tell a capture problem from a model problem.
 - `VOICE_INPUT_DEVICE` env var selects a specific PulseAudio source (see `pactl list short sources`); empty uses the default.
+- `voice/vocabulary.txt` is passed to whisper.cpp as an initial prompt, which soft-biases decoding toward the jargon listed there -- useful for proper nouns, tool names, and acronyms that are rare in Whisper's training data and otherwise get mis-transcribed. Edit the file directly to add terms; no code changes needed. This is a general Whisper-family capability (context conditioning via `--prompt`), not specific to whisper.cpp -- it's a soft bias, not a hard lexicon lock, so it helps most with short, distinctive jargon lists rather than long ones.
 
 ## Design notes
 

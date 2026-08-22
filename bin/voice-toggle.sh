@@ -14,6 +14,10 @@ WHISPER_MODEL="$HOME/tools/whisper.cpp/models/ggml-base.en.bin"
 # base.en can hallucinate repeated tokens (e.g. "[pause] [pause] ...")
 # into the gap between finishing a sentence and pressing stop.
 VAD_MODEL="$HOME/tools/whisper.cpp/models/ggml-silero-v6.2.0.bin"
+# Initial-prompt vocabulary hint: soft-biases decoding toward jargon that's
+# rare in Whisper's training data (proper nouns, tool names, acronyms).
+# Edit this file directly to add your own terms -- no code changes needed.
+VOCAB_FILE="$HOME/agents-dotfiles/voice/vocabulary.txt"
 # PulseAudio source name to record from, e.g. "RDPSource"; empty = default.
 # List available sources with: pactl list short sources
 INPUT_DEVICE="${VOICE_INPUT_DEVICE:-}"
@@ -52,7 +56,9 @@ if [[ -f "$STATE_FILE" ]]; then
 
     VAD_ARGS=()
     [[ -f "$VAD_MODEL" ]] && VAD_ARGS=(--vad -vm "$VAD_MODEL")
-    TRANSCRIPT="$("$WHISPER_BIN" -m "$WHISPER_MODEL" -f "$WAV_FILE" -nt -np "${VAD_ARGS[@]}" 2>/dev/null | tr '\n' ' ' | sed 's/  */ /g; s/^ *//; s/ *$//')"
+    PROMPT_ARGS=()
+    [[ -s "$VOCAB_FILE" ]] && PROMPT_ARGS=(--prompt "$(cat "$VOCAB_FILE")")
+    TRANSCRIPT="$("$WHISPER_BIN" -m "$WHISPER_MODEL" -f "$WAV_FILE" -nt -np "${VAD_ARGS[@]}" "${PROMPT_ARGS[@]}" 2>/dev/null | tr '\n' ' ' | sed 's/  */ /g; s/^ *//; s/ *$//')"
     log "transcript='$TRANSCRIPT'"
     rm -f "$WAV_FILE" "$STATE_FILE"
     tmux_refresh
