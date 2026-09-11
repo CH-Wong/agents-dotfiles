@@ -1,0 +1,15 @@
+{
+  "rules": [
+    {
+      "when": "The task is a big or ambiguous multi-file feature, an architecture or cross-cutting design decision, a risky refactor, a hard bug investigation, or anything that needs holding many moving parts in mind at once.",
+      "use": { "harness": "claude", "model": "claude-fable-5-1", "effort": "xhigh" },
+      "why": "Fable is the strongest-reasoning Claude model. Reserve it for work where getting the approach right matters more than speed or cost."
+    },
+    {
+      "when": "The task is a trivial, narrow, mechanical edit: a rote rename, a formatting sweep, a targeted typo or string fix, simple file gathering, or any other single-file change with one obvious correct answer.",
+      "use": { "harness": "claude", "model": "claude-haiku-4-5-20251001", "effort": "low" },
+      "why": "Use the cheapest fast model when the task is narrow, low-ambiguity, and does not benefit from deeper reasoning."
+    }
+  ],
+  "default": { "harness": "claude", "model": "claude-sonnet-5", "effort": "high" }
+}

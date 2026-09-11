@@ -51,6 +51,15 @@ for f in "$REPO_DIR"/bin/*.sh; do
   link_file "$f" ~/bin/"$(basename "$f")"
 done
 
+# Firstmate-specific config, symlinked into the local firstmate home's
+# gitignored config/ directory so it survives a home re-seed. FM_HOME
+# defaults the same way bin/fm-nudge-heartbeat.sh does.
+FM_HOME="${FM_HOME:-$HOME/code/firstmate}"
+if [[ -d "$FM_HOME" ]]; then
+  mkdir -p "$FM_HOME/config"
+  link_file "$REPO_DIR/firstmate/crew-dispatch.json" "$FM_HOME/config/crew-dispatch.json"
+fi
+
 # Source every tmux/*.conf module idempotently, without clobbering any
 # other machine-specific ~/.tmux.conf content the user may have added
 # locally. New modules just need to be dropped in tmux/ - no bootstrap
@@ -65,3 +74,6 @@ done
 
 echo "Symlinks wired up:"
 ls -la ~/.claude/AGENTS.md ~/.claude/CLAUDE.md ~/.claude/skills ~/bin
+if [[ -d "$FM_HOME" ]]; then
+  ls -la "$FM_HOME/config/crew-dispatch.json"
+fi
